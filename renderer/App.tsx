@@ -44,17 +44,36 @@ const App: React.FC = () => {
     setApiKeyMasked(maskApiKey(key));
   };
 
-  // Simuliert das Senden einer User-Nachricht und eine KI-Antwort
-  const handleSendMessage = (message: string) => {
+  // Sendet die User-Nachricht per IPC an die KI-API und fügt die Antwort ein
+  const handleSendMessage = async (message: string) => {
     setMessages((prev) => [...prev, { role: 'user', content: message }]);
     setIsLoading(true);
-    setTimeout(() => {
+    try {
+      // @ts-ignore
+      const response = await window.kiki_api.sendChatMessage({
+        message,
+        history: messages,
+        config: { provider: 'openai', model: 'gpt-3.5-turbo' }
+      });
+      if (response.success) {
+        setMessages((prev) => [
+          ...prev,
+          { role: 'assistant', content: response.reply || '' }
+        ]);
+      } else {
+        setMessages((prev) => [
+          ...prev,
+          { role: 'assistant', content: '[Fehler] ' + (response.error || 'Unbekannter Fehler bei der KI-Anfrage.') }
+        ]);
+      }
+    } catch (err: any) {
       setMessages((prev) => [
         ...prev,
-        { role: 'assistant', content: 'Dies ist eine simulierte Antwort auf: ' + message }
+        { role: 'assistant', content: '[Fehler] ' + (err.message || 'Kommunikationsfehler mit Backend.') }
       ]);
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   if (loadingKey) {
