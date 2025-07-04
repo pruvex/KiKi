@@ -30,7 +30,7 @@ function createMainWindow(): void {
         // Security best practices:
         contextIsolation: true, // Isolate window context from backend
         nodeIntegration: false, // Prevent Node.js APIs in renderer
-        // preload: path.join(__dirname, 'preload.js'), // For future IPC
+        preload: path.join(__dirname, 'preload.js'), // Bridge between renderer and main
       },
     });
 

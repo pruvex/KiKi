@@ -1,4 +1,5 @@
 import { IpcMain } from 'electron';
+import { registerApiKeyHandlers } from './api-key'; // <--- ADD THIS LINE
 
 /**
  * Registers all IPC (Inter-Process Communication) event handlers.
@@ -7,7 +8,10 @@ import { IpcMain } from 'electron';
  * @param {IpcMain} ipcMain - The IpcMain instance from Electron.
  */
 export function registerIpcHandlers(ipcMain: IpcMain): void {
-  console.log('[IPC] Registering IPC handlers...');
+  console.log('[IPC] Registering all IPC handlers...');
+
+  // Register handlers from different modules
+  registerApiKeyHandlers(ipcMain);
 
   // --- Example of how a module would register its handlers ---
   // import { registerChatHandlers } from './chat-module-handlers';
