@@ -1,0 +1,63 @@
+✅ Phase 1: Technisches Fundament
+Modulname	Zweck
+core.app-shell	Grundgerüst der Electron-App (Fenster, Menü, Icon)
+core.ui-loader	Layout, Sidebar, Platzhalter für Chat, Einstellungen
+core.module-loader	Dynamisches Laden interner Module (später Plug-in-fähig)
+core.logging	Logging für Fehler, Aktionen, Systemereignisse
+
+✅ Phase 2: API-Anbindung + Chatfenster
+Modulname	Zweck
+chat.ui-chat-window	UI + Streamlogik wie bei ChatGPT
+chat.api-key-manager	Eingabe, Speicherung und Validierung von API-Keys
+chat.api-connector	Anbindung an OpenAI / Gemini API mit Streaming
+chat.history-manager	Verlauf der aktuellen Sitzung (RAM)
+
+✅ Phase 3: Grundfunktionen (Dateien & Bedienung)
+Modulname	Zweck
+fs.manager	Erstellen, Lesen, Schreiben, Umbenennen, Löschen
+fs.dragdrop-handler	Drag & Drop in die App, z. B. Datei auf Chat ziehen
+fs.type-utils	Erkennung von Dateitypen, MIME, Basis-Parser
+ui.settings-window	Einstellungen in Modal (Dark Mode, API-Key etc.)
+
+✅ Phase 4: Kontext- & Memory-System
+Modulname	Zweck
+memory.session-store	Aktuelle Sitzung (letzte 20 Nachrichten, Chatverlauf)
+memory.longterm-store	JSON/SQLite für Erinnerungen, Notizen, Regeln
+memory.context-merger	Kombiniert aktuelle Eingabe mit Memory für Prompt-Input
+memory.project-notes	Wissensspeicher über laufende Projekte/Module
+
+✅ Phase 5: Regeln & Verhalten (Rule Engine)
+Modulname	Zweck
+rules.rule-definitions	JSON- oder UI-basiertes Regelwerk ("Niemals .exe löschen")
+rules.enforcer	Prüft alle Aktionen auf Regelverletzungen
+rules.ui-editor	GUI für Regelverwaltung, Prioritäten, Kategorien
+
+✅ Phase 6: Vorschlags-Engine
+Modulname	Zweck
+ai.suggestion-engine	Erkennt fehlende Module, schlägt neue Ideen vor
+ai.prompt-patterns	Verwaltet wiederkehrende Prompts oder Vorlagen
+ai.user-feedback	Ermöglicht Bewertung von Vorschlägen zur Verbesserung
+
+✅ Phase 7: Format-spezifische Module (z. B. PDF, CSV, DOCX)
+Modulname	Zweck
+fs.pdf-handler	PDF öffnen, Text extrahieren, Metadaten anzeigen
+fs.csv-handler	CSV lesen/schreiben, Vorschau im UI
+fs.image-handler	Bilder anzeigen, umwandeln, analysieren
+
+Diese Module sind nicht zwingend, aber einfach erweiterbar, sobald die Basis steht.
+
+✅ Phase 8: Erweiterbarkeit + Plug-in-System (optional)
+Modulname	Zweck
+core.plugin-loader	Lädt externe Module (Plug-ins) nach definierten Regeln
+core.plugin-api	API, über die Plug-ins mit App und Memory interagieren
+
+
+core.app-shell
+
+chat.ui-chat-window
+
+chat.api-key-manager
+
+chat.api-connector
+
+Dann direkt fs.manager
