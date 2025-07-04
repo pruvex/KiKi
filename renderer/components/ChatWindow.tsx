@@ -1,6 +1,3 @@
-Of course. Here is a clean, modular, and fully functional ChatWindow component written in TypeScript with React and styled using TailwindCSS, as requested.
-This code is ready to be placed in renderer/components/ChatWindow.tsx within your Electron + Vite project.
-Generated tsx
 // renderer/components/ChatWindow.tsx
 
 import React, { useState, useEffect, useRef } from 'react';

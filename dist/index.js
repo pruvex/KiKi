@@ -40,7 +40,7 @@ function createMainWindow() {
             mainWindow.webContents.openDevTools();
         }
         else {
-            mainWindow.loadFile(node_path_1.default.join(__dirname, '..', 'dist', 'index.html'));
+            mainWindow.loadFile(node_path_1.default.join(__dirname, '..', 'renderer', 'dist', 'index.html'));
         }
         // Gracefully handle window closure.
         mainWindow.on('closed', () => {
