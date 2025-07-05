@@ -85,7 +85,7 @@ async function callOpenAI(apiKey: string, payload: ChatRequestPayload): Promise<
     return { success: false, error: `OpenAI API Error: ${response.status} ${errorText}` };
   }
 
-  const data = await response.json();
+  const data: any = await response.json();
   return {
     success: true,
     reply: data.choices?.[0]?.message?.content || '',

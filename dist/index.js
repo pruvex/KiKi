@@ -8,7 +8,7 @@ const node_path_1 = __importDefault(require("node:path"));
 const ipc_handlers_1 = require("./ipc-handlers");
 // --- Constants ---
 const IS_DEV = process.env.NODE_ENV === 'development';
-const VITE_DEV_SERVER_URL = 'http://localhost:5173';
+const VITE_DEV_SERVER_URL = process.env.VITE_DEV_SERVER_URL || 'http://localhost:5173';
 // --- Logging ---
 console.log('--- KiKi Core Shell ---');
 console.log(`[Main] Running in ${IS_DEV ? 'development' : 'production'} mode.`);
