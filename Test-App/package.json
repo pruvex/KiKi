@@ -1,0 +1,13 @@
+{
+  "name": "kiki-test-app",
+  "version": "1.2.0",
+  "private": true,
+  "scripts": {
+    "test": "npx playwright test",
+    "test:ui": "npx playwright test --ui",
+    "dev:vite": "cd ../renderer && npm run dev:vite"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.44.1"
+  }
+}
