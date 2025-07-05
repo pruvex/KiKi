@@ -1,8 +1,73 @@
 # KiKi Test-App
 
-## Vollständiger Neustart & Best Practices
+## Was ist die Test-App?
 
-Diese Test-App ist das zentrale End-to-End-Testsystem für die Electron+React-App „KiKi“. Sie wurde nach einem vollständigen Neuaufbau aus dem Remote-Repository eingerichtet und folgt jetzt einer klaren, robusten und agentischen Teststrategie.
+Die KiKi Test-App ist das zentrale, agentische End-to-End-Testsystem für die modulare Electron+React-Desktop-App „KiKi“. Sie automatisiert und prüft alle Kernfunktionen, Module und Schnittstellen der App. Im Fokus stehen:
+- **Robuste E2E-Tests** mit Playwright (Electron- und UI-Tests)
+- **Dynamisches Port- und Umgebungsmanagement** (Vite, Electron, Supervisor)
+- **Automatische Testintegration für neue Module**
+- **Nahtlose Zusammenarbeit mit AI Studio und ChatGPT** für Prompts und Testblöcke
+
+Die Test-App ist so konzipiert, dass jede neue Funktion oder jedes neue Modul sofort getestet werden kann – egal, ob von Menschen oder KI generiert!
+
+---
+
+## 🔄 Workflow: Neue Module & KI-Prompts optimal testen
+
+**Ziel:** Jede Modulentwicklung (egal ob per Hand oder KI) bekommt einen optimalen Prompt und einen Testblock, der direkt in die Test-App passt und das Modul intensiv prüft.
+
+### 1. Entwicklung eines neuen Moduls (z.B. per AI Studio/ChatGPT)
+- Lass dir von ChatGPT/AI Studio einen **Prompt** für das Modul und einen **Testblock** (Playwright-Test) generieren.
+- Der Prompt soll das Modul so beschreiben, dass es sofort in KiKi integriert und getestet werden kann.
+- Der Testblock soll alle Kernfunktionen, Fehlerfälle und UI-Elemente des Moduls abdecken.
+
+### 2. Integration in die Test-App
+- **Prompt und Testblock** werden in die `README.md` und als `.spec.ts` unter `Test-App/tests/` eingefügt.
+- Die Test-App erkennt und testet das neue Modul automatisch im nächsten Durchlauf.
+- Die README dient als Referenz für Prompts und Teststruktur für zukünftige Module.
+
+### 3. Automatisierte Prüfung
+- Die Test-App läuft agentisch: Sie startet alle nötigen Prozesse (Vite, Electron), wartet auf die App und prüft alle Module mit Playwright.
+- Ergebnisse, Fehler und Screenshots werden automatisch abgelegt und können für die Weiterentwicklung genutzt werden.
+
+---
+
+## 📄 Anleitung: Wie Prompts und Testblöcke optimal aussehen
+
+**Prompt für ein neues Modul (Beispiel):**
+```
+Erstelle ein KiKi-Modul "Notizen", das ... (Beschreibung, Schnittstellen, UI, Events, etc.)
+```
+
+**Testblock für die Test-App (Beispiel):**
+```typescript
+import { test, expect, _electron } from '@playwright/test';
+test('Notizen-Modul: Erstellen, Bearbeiten, Löschen', async () => {
+  // ... Playwright-Code, der alle Kernfunktionen prüft
+});
+```
+
+**Wichtig:**
+- Testblöcke müssen robust, atomar und auf das jeweilige Modul zugeschnitten sein.
+- Jeder Prompt und Testblock wird direkt im README dokumentiert und als `.spec.ts` implementiert.
+
+---
+
+## 🤖 KI-Workflow für die Zukunft
+
+1. **ChatGPT/AI Studio generiert Prompt und Testblock für ein neues Modul.**
+2. **Du fügst beides in die README.md und als Testdatei ein.**
+3. **Ich optimiere und integriere Prompt und Testblock automatisch für KiKi und die Test-App.**
+4. **Jedes neue Modul ist dadurch sofort optimal testbar und dokumentiert.**
+
+---
+
+## Best Practices & Referenz
+- Die Test-App ist Referenz für automatisiertes, agentisches Testen in KiKi.
+- Jeder neue Prompt/Testblock wird so gestaltet, dass er in die Test-App passt und das Modul umfassend prüft.
+- Entwickler und KI können sich an der README und den bestehenden Testfällen orientieren.
+
+---
 
 ---
 
