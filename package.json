@@ -2,7 +2,7 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "concurrently \"npm:dev:vite\" \"npm:dev:electron\"",
-    "dev:vite": "vite renderer",
+    "dev:vite": "vite renderer --port 5175",
     "dev:electron": "cross-env NODE_ENV=development electron .",
     "start": "cross-env NODE_ENV=production electron .",
     "build": "npm run build:renderer && npm run build:main",
@@ -12,6 +12,7 @@
   "devDependencies": {
     "@google/gemini-cli": "^0.1.9",
     "@types/node": "^24.0.10",
+    "@types/node-fetch": "^2.6.12",
     "@vitejs/plugin-react": "^4.3.1",
     "concurrently": "^8.2.2",
     "cross-env": "^7.0.3",
@@ -23,6 +24,7 @@
   "dependencies": {
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
+    "node-fetch": "^3.3.2",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
   }
