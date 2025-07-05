@@ -2,6 +2,7 @@
 // (Inhalt aus der alten Test-App übernommen, ggf. anpassen)
 
 import { test, expect, _electron, type ElectronApplication } from '@playwright/test';
+test.describe.configure({ mode: 'serial' });
 import path from 'path';
 
 let electronApp: ElectronApplication;

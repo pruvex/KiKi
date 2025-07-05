@@ -1,4 +1,15 @@
 import React, { useState, useEffect } from 'react';
+
+// Fallback für window.kiki_api, falls Preload-Bridge fehlt (z.B. im Browser)
+if (typeof window.kiki_api === 'undefined') {
+  window.kiki_api = {
+    loadApiKey: async () => null,
+    sendChatMessage: async () => ({ success: false, error: 'No backend' }),
+    saveApiKey: async () => {},
+    getAppVersion: async () => 'dev',
+  };
+}
+
 import ChatWindow from './components/ChatWindow';
 import ApiKeyManager, { maskApiKey } from './components/ApiKeyManager';
 
@@ -23,9 +34,19 @@ const App: React.FC = () => {
     async function fetchKey() {
       try {
         // @ts-ignore
-        const key = await window.kiki_api.loadApiKey();
-        setApiKey(key);
-        setApiKeyMasked(maskApiKey(key));
+        const result = await window.kiki_api.loadApiKey();
+        console.log('APIKey-Load-Result (Startup):', result);
+        if (result && result.success && typeof result.apiKey === 'string' && result.apiKey.length >= 8) {
+          setApiKey(result.apiKey);
+          setApiKeyMasked(maskApiKey(result.apiKey));
+        } else if (result && typeof result.apiKey !== 'string') {
+          console.error('APIKey-Load-Result: apiKey is not a string:', result.apiKey);
+          setApiKey(null);
+          setApiKeyMasked(null);
+        } else {
+          setApiKey(null);
+          setApiKeyMasked(null);
+        }
       } catch {
         setApiKey(null);
         setApiKeyMasked(null);
@@ -39,9 +60,19 @@ const App: React.FC = () => {
   // Callback nach erfolgreichem Speichern eines neuen Keys
   const handleKeySaved = async () => {
     // @ts-ignore
-    const key = await window.kiki_api.loadApiKey();
-    setApiKey(key);
-    setApiKeyMasked(maskApiKey(key));
+    const result = await window.kiki_api.loadApiKey();
+    console.log('APIKey-Load-Result (handleKeySaved):', result);
+    if (result && result.success && typeof result.apiKey === 'string' && result.apiKey.length >= 8) {
+      setApiKey(result.apiKey);
+      setApiKeyMasked(maskApiKey(result.apiKey));
+    } else if (result && typeof result.apiKey !== 'string') {
+      console.error('APIKey-Load-Result: apiKey is not a string:', result.apiKey);
+      setApiKey(null);
+      setApiKeyMasked(null);
+    } else {
+      setApiKey(null);
+      setApiKeyMasked(null);
+    }
   };
 
   // Sendet die User-Nachricht per IPC an die KI-API und fügt die Antwort ein
@@ -75,6 +106,10 @@ const App: React.FC = () => {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    document.title = "KiKi";
+  }, [apiKey, loadingKey]);
 
   if (loadingKey) {
     return <div className="flex items-center justify-center h-full w-full text-gray-400">Loading...</div>;

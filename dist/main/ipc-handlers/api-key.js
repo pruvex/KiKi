@@ -25,6 +25,12 @@ function registerApiKeyHandlers(ipcMain) {
     // Handler to load an API key
     ipcMain.handle('api-key:load', async () => {
         console.log('[IPC] Received api-key:load request.');
-        return await (0, api_key_store_1.loadApiKey)();
+        const key = await (0, api_key_store_1.loadApiKey)();
+        if (key) {
+            return { success: true, apiKey: key };
+        }
+        else {
+            return { success: false, apiKey: null };
+        }
     });
 }

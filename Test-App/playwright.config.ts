@@ -10,11 +10,12 @@ export default defineConfig({
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
     trace: 'retain-on-failure',
+    headless: false, // Electron-Fenster immer sichtbar
   },
   projects: [
     {
       name: 'Electron',
-      use: { ...devices['Desktop Chrome'] },
+      use: {}, // Kein Browser-Device, echtes Electron
     },
   ],
 });

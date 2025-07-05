@@ -107,18 +107,6 @@ test('Notizen-Modul: Erstellen, Bearbeiten, Löschen', async () => {
 - **Agentisches Testen**: Skripte und Configs sind so gestaltet, dass alles ohne manuelle Eingriffe läuft.
 
 ---
-
-## 🧑‍💻 Best Practices
-- Schreibe atomare, modulare Testfälle – pro Modul eine Datei.
-- Nutze explizite Waits und robuste Assertions (keine Race Conditions).
-- Vermeide Hardcodings, nutze Umgebungsvariablen wo möglich.
-- Dokumentiere neue Testfälle und Besonderheiten direkt im Code oder als Markdown im Test-App-Ordner.
-
----
-
-## 🆘 Troubleshooting
-- **Port 5175 belegt?** Das Startskript killt automatisch Prozesse. Bei Problemen: Port manuell freigeben.
-- **Dev-Server läuft nicht?** Prüfe Logs aus `renderer/` und im Testlauf.
 - **Electron-Fenster bleibt leer?** Prüfe, ob der Dev-Server erreichbar ist und die URL stimmt.
 - **CI/CD schlägt fehl?** Siehe GitHub Actions-Logs und Screenshots.
 - **Repo/Branch beschädigt?** Klone das Repo neu und sichere lokale Änderungen manuell.

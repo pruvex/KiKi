@@ -1,14 +1,15 @@
 @echo off
-REM Kill any process on port 5175 (Windows)
-for /f "tokens=5" %%a in ('netstat -aon ^| findstr :5175') do (
-  if not "%%a"=="0" taskkill /f /pid %%a
+REM Beende alle Prozesse, die Port 5175 belegen (Windows Batch)
+for /f "tokens=5" %%a in ('netstat -aon ^| find ":5175" ^| find "LISTENING"') do (
+    echo Beende Prozess auf Port 5175: PID=%%a
+    taskkill /F /PID %%a
 )
-
-REM Start Vite Dev Server
-start "vite" cmd /c "cd ..\renderer && npm run dev:vite"
-
-REM Wait for Vite to be ready (simple wait, can be improved)
-TIMEOUT /T 8
-
-REM Start Playwright tests
+REM Starte Vite-Dev-Server im Hintergrund
+start "" /B cmd /c "cd /d C:\KiKi-NEU\renderer && npm run dev:vite"
+REM Warte 8 Sekunden, damit der Dev-Server sicher bereit ist
+timeout /t 8
+REM Starte Playwright Test-UI im aktuellen Fenster
+cd /d C:\KiKi-NEU\Test-App
 npx playwright test --ui
+REM Hinweis: Die Electron-App wird jetzt nur noch von Playwright für die Tests gestartet!
+pause

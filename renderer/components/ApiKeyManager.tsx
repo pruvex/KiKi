@@ -13,7 +13,12 @@ interface ApiKeyManagerProps {
  * @returns A masked string or an empty string if key is invalid.
  */
 export const maskApiKey = (key: string | null): string | null => {
-  if (!key || key.length < 8) return null;
+  if (typeof key !== 'string' || key.length < 8) {
+    if (typeof key !== 'string') {
+      console.error('maskApiKey: key is not a string', key, new Error().stack);
+    }
+    return null;
+  }
   return `${key.substring(0, 4)}••••••••••••${key.substring(key.length - 4)}`;
 };
 
