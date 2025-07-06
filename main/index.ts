@@ -4,7 +4,7 @@ import { registerIpcHandlers } from './ipc-handlers';
 
 // --- Constants ---
 const IS_DEV = process.env.NODE_ENV === 'development';
-const VITE_DEV_SERVER_URL = process.env.VITE_DEV_SERVER_URL || 'http://localhost:5173';
+const VITE_DEV_SERVER_URL = process.env.VITE_DEV_SERVER_URL || 'http://localhost:5175';
 
 // --- Logging ---
 console.log('--- KiKi Core Shell ---');
@@ -34,11 +34,23 @@ function createMainWindow(): void {
       },
     });
 
-    // Load the UI: either from the Vite dev server or the production build.
-    if (IS_DEV) {
-      mainWindow.loadURL(VITE_DEV_SERVER_URL);
-      mainWindow.webContents.openDevTools();
+    // Load the UI: either from the Vite dev server, a command-line argument, or the production build.
+    const urlToLoad = process.argv[2] || VITE_DEV_SERVER_URL;
+
+    if (urlToLoad) {
+      console.log(`[Main] Lade URL: ${urlToLoad}`);
+      mainWindow.loadURL(urlToLoad);
+      if (IS_DEV) {
+        mainWindow.webContents.openDevTools();
+        mainWindow.webContents.on('did-finish-load', () => {
+          if (mainWindow) {
+            const [width, height] = mainWindow.getSize();
+            console.log(`[Main] Fenstergröße nach Laden: ${width}x${height}`);
+          }
+        });
+      }
     } else {
+      console.log('[Main] Lade Produktions-Build.');
       mainWindow.loadFile(path.join(__dirname, '..', 'renderer', 'dist', 'index.html'));
     }
 

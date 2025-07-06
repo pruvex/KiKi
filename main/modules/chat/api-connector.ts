@@ -44,8 +44,6 @@ export function registerApiConnector(ipcMain: IpcMain) {
     try {
       if (provider === 'openai') {
         return await callOpenAI(apiKey, payload);
-      } else if (provider === 'gemini') {
-        return await callGemini(apiKey, payload);
       } else {
         return { success: false, error: `Unknown provider: ${provider}` };
       }
@@ -95,15 +93,5 @@ async function callOpenAI(apiKey: string, payload: ChatRequestPayload): Promise<
       totalTokens: data.usage.total_tokens,
     } : undefined,
     provider: 'openai'
-  };
-}
-
-async function callGemini(apiKey: string, payload: ChatRequestPayload): Promise<ChatResponse> {
-  // Placeholder: Replace with actual Gemini API call
-  // For demo purposes, return a mock response
-  return {
-    success: true,
-    reply: `[Gemini-Mock] Antwort auf: ${payload.message}`,
-    provider: 'gemini'
   };
 }

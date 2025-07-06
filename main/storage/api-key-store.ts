@@ -14,8 +14,14 @@ interface ApiKeyData {
  * @param apiKey The API key string to save.
  * @returns A promise that resolves when the key is saved.
  */
-export async function saveApiKey(apiKey: string): Promise<void> {
+export async function saveApiKey(apiKey: string | null): Promise<void> {
   try {
+    if (!apiKey) {
+      // If apiKey is null or empty, delete the file
+      await fs.unlink(API_KEY_FILE_PATH);
+      console.log('[ApiKeyStore] API Key file deleted.');
+      return;
+    }
     const data: ApiKeyData = { apiKey };
     // Ensure the directory exists
     await fs.mkdir(path.dirname(API_KEY_FILE_PATH), { recursive: true });

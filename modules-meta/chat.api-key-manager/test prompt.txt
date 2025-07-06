@@ -1,0 +1,62 @@
+Du bist ein erfahrener TypeScript- und End-to-End-Testentwickler für Electron+React+Vite-Projekte. Schreibe einen vollständigen, robusten Playwright-Testblock für das Modul 
+chat.api-key-manager
+ der KiKi-App. Ziel ist es, das gesamte Key-Handling (Speichern, Laden, Löschen, Fehlerfälle) isoliert und umfassend zu testen, bevor komplexere Chat-API-Tests gebaut werden.
+
+Kontext & Architektur:
+
+Das Modul ermöglicht Nutzern, API-Keys für externe KI-Dienste (z.B. OpenAI) sicher einzugeben, zu validieren und lokal zu speichern.
+Die UI-Komponente (ApiKeyManager) ist ein stateless React-Component mit Masked Input, Save-Button, Statusanzeige.
+Die Kommunikation läuft über ein Preload-API (window.kiki_api.saveApiKey, window.kiki_api.loadApiKey), das per IPC an den Main-Prozess weiterleitet.
+Der Main-Prozess persistiert den Key in einer Datei (kiki-api-key.json) im UserData-Verzeichnis.
+Es gibt Basis-Validierung im Frontend und Fehlerbehandlung im Backend.
+Testziele:
+
+Isoliert und atomar testen, dass das Speichern, Laden, Löschen und Validieren von API-Keys zuverlässig funktioniert.
+Fehlerfälle abdecken: leerer Key, ungültiges Format, Key überschreiben, Key nicht vorhanden.
+UI-Feedback (Statusanzeige) und Persistenz überprüfen.
+Keine Abhängigkeit zu echten API-Requests oder anderen Modulen.
+Best Practices:
+
+Jeder Test ist unabhängig, setzt saubere Ausgangslage.
+Nutze explizite Waits und robuste Assertions.
+Dokumentiere die Testfälle klar im Code.
+Keine Hardcodings außer für Test-Keys (z.B. sk-test-12345).
+Teste sowohl das Preload-API als auch, wo sinnvoll, die UI-Komponente direkt (z.B. via Playwright UI-Interaktion).
+Zu testende Szenarien (mindestens):
+
+Speichern eines gültigen API-Keys über das Preload-API.
+Laden eines zuvor gespeicherten Keys.
+Überschreiben eines bestehenden Keys.
+Löschen/Resetten eines Keys (falls vorgesehen).
+Verhalten bei leerem/ungültigem Key (Validation-Feedback).
+Statusanzeige nach erfolgreichem/fehlgeschlagenem Speichern.
+Persistenz: Key bleibt nach App-Neustart erhalten.
+Fehlerfall: Laden, wenn kein Key gespeichert ist.
+Optional: Maskierung des Keys in der UI.
+Template/Struktur:
+
+Datei: Test-App/tests/03-api-key-manager.spec.ts
+Test-Suite mit test.describe('API Key Manager', ...)
+Nutze vorhandene Hilfsfunktionen/Setup aus der Test-App (siehe README).
+Jeder Testfall mit kurzem Kommentar, was geprüft wird.
+Beispiel für einen Testfall:
+
+ts
+test('should save and load API key via preload', async () => {
+  const testKey = 'sk-test-1234567890';
+  // Speichern
+  await appWindow.evaluate(async (key) => {
+    await window.kiki_api.saveApiKey(key);
+  }, testKey);
+
+  // Laden
+  const loadedKey = await appWindow.evaluate(async () => {
+    return window.kiki_api.loadApiKey();
+  });
+
+  expect(loadedKey).toBe(testKey);
+});
+Erwartetes Ergebnis:
+Ein vollständiger Playwright-Testblock, der das Modul 
+chat.api-key-manager
+ nach obigen Vorgaben testet. Die Tests müssen robust, atomar und CI-tauglich sein.

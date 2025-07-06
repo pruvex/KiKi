@@ -6,7 +6,7 @@ import React, { useState, useEffect, useRef } from 'react';
  * Defines the structure of a single chat message.
  * 'role' determines the sender and visual representation of the message.
  */
-type Message = {
+export type Message = {
   role: 'user' | 'assistant';
   content: string;
 };

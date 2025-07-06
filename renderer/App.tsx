@@ -1,16 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import ChatWindow from './components/ChatWindow';
+import ChatWindow, { Message } from './components/ChatWindow';
 import ApiKeyManager, { maskApiKey } from './components/ApiKeyManager';
 
 // Demo-Nachrichten für den Test
-const initialMessages = [
+const initialMessages: Message[] = [
   { role: 'assistant', content: 'Willkommen bei KiKi! Wie kann ich helfen?' },
   { role: 'user', content: 'Hallo, was kannst du?' },
   { role: 'assistant', content: 'Ich kann dich bei vielen Aufgaben unterstützen. Frag mich einfach!' }
 ];
 
 const App: React.FC = () => {
-  const [messages, setMessages] = useState(initialMessages);
+  const [messages, setMessages] = useState<Message[]>(() => [...initialMessages]);
   const [isLoading, setIsLoading] = useState(false);
 
   // API-Key State
@@ -42,6 +42,7 @@ const App: React.FC = () => {
     const key = await window.kiki_api.loadApiKey();
     setApiKey(key);
     setApiKeyMasked(maskApiKey(key));
+    setMessages([...initialMessages]); // Chat zurücksetzen nach neuem Key
   };
 
   // Sendet die User-Nachricht per IPC an die KI-API und fügt die Antwort ein
@@ -76,17 +77,27 @@ const App: React.FC = () => {
     }
   };
 
-  if (loadingKey) {
-    return <div className="flex items-center justify-center h-full w-full text-gray-400">Loading...</div>;
-  }
+  // Setze den Fenstertitel nach erfolgreichem Laden und vorhandenem API-Key
+  useEffect(() => {
+    if (!loadingKey && apiKey) {
+      document.title = 'KiKi';
+    }
+  }, [loadingKey, apiKey]);
 
   // Zeige zuerst das API-Key-UI, dann das Chat-UI
   return (
     <div className="w-full h-full">
-      {!apiKey ? (
-        <ApiKeyManager onKeySaved={handleKeySaved} currentKeyMasked={apiKeyMasked} />
+      {loadingKey ? (
+        <div className="flex items-center justify-center h-full w-full text-gray-400">Loading...</div>
       ) : (
-        <ChatWindow messages={messages} onSendMessage={handleSendMessage} isLoading={isLoading} />
+        <>
+          <div style={{ display: !apiKey ? 'block' : 'none' }}>
+            <ApiKeyManager onKeySaved={handleKeySaved} currentKeyMasked={apiKeyMasked} />
+          </div>
+          <div style={{ display: apiKey ? 'block' : 'none' }}>
+            <ChatWindow messages={messages} onSendMessage={handleSendMessage} isLoading={isLoading} />
+          </div>
+        </>
       )}
     </div>
   );

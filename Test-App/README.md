@@ -49,6 +49,28 @@ Diese Test-App ist das zentrale End-to-End-Testsystem für die Electron+React-Ap
 - Vermeide Hardcodings, nutze Umgebungsvariablen wo möglich.
 - Dokumentiere neue Testfälle und Besonderheiten direkt im Code oder als Markdown im Test-App-Ordner.
 
+### ➕ **So fügst du einen neuen Testblock / ein neues Modul hinzu:**
+1. **Neue Datei:** Lege eine neue Datei unter `Test-App/tests/` an, z.B. `02-dein-modul.spec.ts`.
+2. **Test-Suite:** Erstelle eine eigene `test.describe('dein-modul', ...)`-Suite für das Modul.
+3. **Setup:** Nutze die bestehenden Hilfsfunktionen und Umgebungsvariablen (siehe Beispiele in `01-smoke-test.spec.ts`).
+4. **Assertions:** Prüfe alle Kernfunktionen und Fehlerfälle des Moduls.
+5. **Dokumentation:** Schreibe am Anfang der Datei einen kurzen Kommentar, was genau getestet wird.
+6. **Commit & Push:** Feature-Branch nutzen, Merge Request stellen.
+
+**Beispiel-Template für neue Testblöcke:**
+```typescript
+// tests/02-dein-modul.spec.ts
+import { test, expect, _electron } from '@playwright/test';
+
+test.describe('dein-modul: E2E Tests', () => {
+  test('Modul-Feature funktioniert', async () => {
+    // ...
+  });
+});
+```
+
+**Tipp:** Bestehende Testblöcke wie `01-smoke-test.spec.ts` als Vorlage nutzen!
+
 ---
 
 ## 🆘 Troubleshooting
@@ -67,4 +89,22 @@ Diese Test-App ist das zentrale End-to-End-Testsystem für die Electron+React-Ap
 
 ---
 
+## 💤 Aktueller Stand (06.07.2025)
+
+- **React-Hook-Fehler (`Rendered more hooks than during the previous render`) besteht weiterhin.**
+- Doppelte React-Installationen im Projekt wurden beseitigt (`renderer/node_modules` gelöscht, alles über Hauptprojekt installiert).
+- Build und Dev-Server laufen, aber Electron-Fenster bleibt weiß und React bricht mit Hook-Fehler ab.
+- Nächster Schritt: **Untersuchen, warum App.tsx beim ersten Rendern unterschiedliche Hooks aufruft.**
+- Hinweise: Keine bedingten Hooks in App.tsx, ApiKeyManager.tsx, ChatWindow.tsx. Problem könnte durch State-Initialisierung, fehlerhaften Import oder Hot-Reload verursacht sein.
+- Siehe Chat-Verlauf/Fehlerkonsole für genaue Fehlermeldung.
+
+**Morgen weitermachen:**
+1. App.tsx und alle Imports prüfen: Gibt es dynamische/bedingte Komponenten, die Hooks unterschiedlich initialisieren?
+2. Build/Cache komplett löschen und neu bauen (`node_modules`, `.vite`, `dist` usw. löschen, dann `npm install`, `npm run build`).
+3. Prüfen, ob Hooks evtl. in einer Schleife oder in einer Funktion außerhalb der Komponente aufgerufen werden.
+4. Notieren, welche Schritte schon gemacht wurden (siehe oben).
+
+---
+
 *Diese Test-App ist nach dem vollständigen Neuaufbau robuster und agentischer als je zuvor. Du kannst dich jetzt voll auf die Entwicklung und das Hinzufügen neuer Testfälle konzentrieren!*
+

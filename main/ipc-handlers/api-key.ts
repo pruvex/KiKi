@@ -9,10 +9,19 @@ export function registerApiKeyHandlers(ipcMain: IpcMain): void {
   // Handler to save an API key
   ipcMain.handle(
     'api-key:save',
-    async (_event, apiKey: string): Promise<{ success: boolean; error?: string }> => {
+    async (_event, apiKey: string | null): Promise<{ success: boolean; error?: string }> => {
       console.log('[IPC] Received api-key:save request.');
-      // Basic backend validation
-      if (!apiKey || typeof apiKey !== 'string' || apiKey.trim().length < 10) {
+      // Allow null/empty string to clear the key
+      if (apiKey === null || apiKey.trim() === '') {
+        try {
+          await saveApiKey(null);
+          return { success: true };
+        } catch (error: any) {
+          return { success: false, error: error.message };
+        }
+      }
+      // Basic backend validation for non-empty keys
+      if (typeof apiKey !== 'string' || apiKey.trim().length < 10) {
         return { success: false, error: 'Invalid API key provided.' };
       }
       try {
