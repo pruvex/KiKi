@@ -1,0 +1,205 @@
+Absolut. Als erfahrener E2E-Entwickler weiß ich, wie wichtig isolierte, atomare und robuste Tests für eine solide Basis sind. Ein zuverlässiges Key-Management ist die Grundlage für alle weiteren API-Interaktionen.
+Hier ist ein vollständiger und robuster Playwright-Testblock für das chat.api-key-manager-Modul, der alle Ihre Anforderungen und Best Practices berücksichtigt.
+Test-App/tests/03-api-key-manager.spec.ts
+Generated typescript
+import { test, expect, _electron, ElectronApplication, Page } from '@playwright/test';
+import * as path from 'path';
+
+/**
+ * Hilfsfunktion, um das Hauptfenster der App robust zu finden und zurückzugeben.
+ * Sie wartet geduldig, bis das Fenster die erwartete URL geladen hat.
+ */
+async function getAppWindow(electronApp: ElectronApplication): Promise<Page> {
+  const maxRetries = 10;
+  const retryDelay = 500; // ms
+
+  for (let i = 0; i < maxRetries; i++) {
+    const windows = electronApp.windows();
+    const appWindow = windows.find(w => w.url().includes('http://localhost'));
+
+    if (appWindow) {
+      await appWindow.waitForLoadState('domcontentloaded');
+      return appWindow;
+    }
+    await new Promise(resolve => setTimeout(resolve, retryDelay));
+  }
+  throw new Error('Hauptfenster der Anwendung nach mehreren Versuchen nicht gefunden.');
+}
+
+/**
+ * Hilfsfunktion, um den API-Schlüssel-Speicher vor einem Test zurückzusetzen.
+ * Dies ist entscheidend, um sicherzustellen, dass jeder Test unabhängig ist.
+ * Wir gehen davon aus, dass `saveApiKey` mit null/leer den Key löscht.
+ */
+async function resetApiKeyStorage(page: Page) {
+  await page.evaluate(async () => {
+    // Warten, bis die API bereit ist, um Race Conditions zu vermeiden
+    await new Promise<void>((resolve) => {
+      const check = () => (window.kiki_api ? resolve() : setTimeout(check, 100));
+      check();
+    });
+    // Speichern eines leeren Wertes, um den Schlüssel zu löschen/zurückzusetzen.
+    await window.kiki_api.saveApiKey(null);
+  });
+}
+
+// === TEST SUITE: API Key Manager ===
+test.describe('API Key Manager E2E Tests', () => {
+  let electronApp: ElectronApplication;
+  let appWindow: Page;
+
+  // Startet die Electron-Anwendung einmal für die gesamte Test-Suite.
+  test.beforeAll(async () => {
+    electronApp = await _electron.launch({
+      args: [path.join(__dirname, '../../dist/main/index.js'), 'http://localhost:5175'],
+    });
+    appWindow = await getAppWindow(electronApp);
+  });
+
+  // Schließt die Anwendung nach Abschluss aller Tests.
+  test.afterAll(async () => {
+    // Letztes Aufräumen, um keinen Schlüssel auf dem System zu hinterlassen.
+    await resetApiKeyStorage(appWindow);
+    await electronApp.close();
+  });
+
+  // Setzt vor JEDEM Test den Speicher zurück, um eine saubere Ausgangslage zu garantieren.
+  test.beforeEach(async () => {
+    await resetApiKeyStorage(appWindow);
+  });
+
+  // --- Tests für die Preload/IPC-API-Schicht ---
+  test.describe('Preload API Layer', () => {
+    test('should save and subsequently load an API key', async () => {
+      const testKey = 'sk-test-preload-12345';
+
+      // 1. Speichern des Schlüssels über die Preload-API
+      const saveResult = await appWindow.evaluate(async (key) => {
+        return window.kiki_api.saveApiKey(key);
+      }, testKey);
+      expect(saveResult?.success).toBe(true);
+
+      // 2. Laden des Schlüssels zur Überprüfung
+      const loadedKey = await appWindow.evaluate(async () => {
+        return window.kiki_api.loadApiKey();
+      });
+
+      // 3. Assertion: Der geladene Schlüssel muss dem gespeicherten entsprechen.
+      expect(loadedKey).toBe(testKey);
+    });
+
+    test('should return null or undefined when loading a key that does not exist', async () => {
+      // Vorbedingung (durch beforeEach sichergestellt): Es ist kein Schlüssel gespeichert.
+      const loadedKey = await appWindow.evaluate(async () => {
+        return window.kiki_api.loadApiKey();
+      });
+
+      // Assertion: Das Ergebnis muss "falsy" sein (null, undefined, '').
+      expect(loadedKey).toBeFalsy();
+    });
+
+    test('should overwrite an existing API key', async () => {
+      const initialKey = 'sk-test-initial-67890';
+      const newKey = 'sk-test-overwritten-abcde';
+
+      // 1. Ersten Schlüssel speichern
+      await appWindow.evaluate(key => window.kiki_api.saveApiKey(key), initialKey);
+
+      // 2. Neuen Schlüssel speichern, der den alten überschreiben soll
+      await appWindow.evaluate(key => window.kiki_api.saveApiKey(key), newKey);
+
+      // 3. Schlüssel laden und überprüfen
+      const loadedKey = await appWindow.evaluate(() => window.kiki_api.loadApiKey());
+      expect(loadedKey).toBe(newKey);
+      expect(loadedKey).not.toBe(initialKey);
+    });
+  });
+
+  // --- Tests für die UI-Interaktion ---
+  test.describe('UI Interaction', () => {
+    test('should allow a user to save a key and show a success message', async () => {
+      const testKey = 'sk-test-ui-fghij';
+      
+      // UI-Elemente lokalisieren
+      const keyInput = appWindow.getByPlaceholder(/API-Schlüssel eingeben/i);
+      const saveButton = appWindow.getByRole('button', { name: /speichern/i });
+
+      // 1. Schlüssel in das Eingabefeld eingeben
+      await keyInput.fill(testKey);
+
+      // 2. Speicher-Button klicken
+      await saveButton.click();
+
+      // 3. Überprüfen des UI-Feedbacks (Statusanzeige)
+      const successMessage = appWindow.getByText(/erfolgreich gespeichert/i);
+      await expect(successMessage).toBeVisible();
+
+      // 4. Verifizierung auf API-Ebene: Wurde der Schlüssel wirklich persistiert?
+      const loadedKey = await appWindow.evaluate(() => window.kiki_api.loadApiKey());
+      expect(loadedKey).toBe(testKey);
+    });
+
+    test('should show a validation error if saving an empty key', async () => {
+      const keyInput = appWindow.getByPlaceholder(/API-Schlüssel eingeben/i);
+      const saveButton = appWindow.getByRole('button', { name: /speichern/i });
+
+      // Sicherstellen, dass das Feld leer ist
+      await keyInput.clear();
+      
+      // 1. Versuch, mit leerem Feld zu speichern
+      await saveButton.click();
+
+      // 2. Überprüfen des UI-Feedbacks (Fehlermeldung)
+      const errorMessage = appWindow.getByText(/Schlüssel darf nicht leer sein/i);
+      await expect(errorMessage).toBeVisible();
+
+      // 3. Verifizierung: Es darf kein Schlüssel gespeichert worden sein.
+      const loadedKey = await appWindow.evaluate(() => window.kiki_api.loadApiKey());
+      expect(loadedKey).toBeFalsy();
+    });
+
+    // Optionaler Test für die Maskierung des Keys
+    test('should mask the API key in the input field after loading', async () => {
+      const testKey = 'sk-test-masking-klmno';
+      
+      // 1. Schlüssel im Hintergrund speichern
+      await appWindow.evaluate(key => window.kiki_api.saveApiKey(key), testKey);
+
+      // 2. Seite neu laden, um den Ladevorgang der Komponente zu simulieren
+      await appWindow.reload();
+      
+      // 3. Überprüfen, ob der Wert im Input-Feld maskiert ist (z.B. mit Passwort-Punkten)
+      // und nicht der Klartext-Schlüssel ist.
+      const keyInput = appWindow.getByPlaceholder(/API-Schlüssel eingeben/i);
+      await expect(keyInput).not.toHaveValue(testKey);
+      await expect(keyInput).toHaveValue(/•/); // Prüft, ob Maskierungszeichen vorhanden sind
+    });
+  });
+
+  // --- Test für die Persistenz über einen App-Neustart hinweg ---
+  test('should persist the API key after an application restart', async () => {
+    const persistentKey = 'sk-test-persistent-pqrst';
+    
+    // --- Phase 1: Speichern und Schließen ---
+    // 1. Speichern des Schlüssels
+    await appWindow.evaluate(key => window.kiki_api.saveApiKey(key), persistentKey);
+    
+    // 2. Anwendung schließen
+    await electronApp.close();
+
+    // --- Phase 2: Neu starten und Überprüfen ---
+    // 3. Anwendung neu starten
+    electronApp = await _electron.launch({
+      args: [path.join(__dirname, '../../dist/main/index.js'), 'http://localhost:5175'],
+    });
+    const newAppWindow = await getAppWindow(electronApp);
+
+    // 4. Schlüssel laden, ohne ihn erneut zu speichern
+    const loadedKeyAfterRestart = await newAppWindow.evaluate(() => window.kiki_api.loadApiKey());
+
+    // 5. Assertion: Der geladene Schlüssel muss der aus der vorherigen Sitzung sein.
+    expect(loadedKeyAfterRestart).toBe(persistentKey);
+  });
+});
+Use code with caution.
+TypeScript

@@ -17,6 +17,12 @@ const API_KEY_FILE_PATH = node_path_1.default.join(USER_DATA_PATH, 'kiki-api-key
  */
 async function saveApiKey(apiKey) {
     try {
+        if (!apiKey) {
+            // If apiKey is null or empty, delete the file
+            await promises_1.default.unlink(API_KEY_FILE_PATH);
+            console.log('[ApiKeyStore] API Key file deleted.');
+            return;
+        }
         const data = { apiKey };
         // Ensure the directory exists
         await promises_1.default.mkdir(node_path_1.default.dirname(API_KEY_FILE_PATH), { recursive: true });

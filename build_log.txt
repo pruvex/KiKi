@@ -1,0 +1,4 @@
+
+> build:main
+> tsc && tsc -p tsconfig.preload.json && copyfiles -u 1 main/preload.js dist/main
+

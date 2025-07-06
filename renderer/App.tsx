@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 
 // Fallback für window.kiki_api, falls Preload-Bridge fehlt (z.B. im Browser)
@@ -14,14 +15,19 @@ import ChatWindow from './components/ChatWindow';
 import ApiKeyManager, { maskApiKey } from './components/ApiKeyManager';
 
 // Demo-Nachrichten für den Test
-const initialMessages = [
+type Message = {
+  role: 'assistant' | 'user';
+  content: string;
+};
+
+const initialMessages: Message[] = [
   { role: 'assistant', content: 'Willkommen bei KiKi! Wie kann ich helfen?' },
   { role: 'user', content: 'Hallo, was kannst du?' },
   { role: 'assistant', content: 'Ich kann dich bei vielen Aufgaben unterstützen. Frag mich einfach!' }
 ];
 
 const App: React.FC = () => {
-  const [messages, setMessages] = useState(initialMessages);
+  const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [isLoading, setIsLoading] = useState(false);
 
   // API-Key State
@@ -128,3 +134,4 @@ const App: React.FC = () => {
 };
 
 export default App;
+

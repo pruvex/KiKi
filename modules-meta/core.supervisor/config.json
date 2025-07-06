@@ -1,0 +1,10 @@
+{
+  "modules": [
+    {
+      "name": "code-normalizer",
+      "start": "node scripts/watch-and-normalize.js",
+      "watch": true
+    }
+    // Weitere Module können hier hinzugefügt werden
+  ]
+}
