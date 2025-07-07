@@ -1,26 +1,8 @@
 import { test, expect, _electron, ElectronApplication, Page } from '@playwright/test';
 import * as path from 'path';
-
-/**
- * Hilfsfunktion, um das Hauptfenster der App robust zu finden und zurückzugeben.
- * Sie wartet geduldig, bis das Fenster die erwartete URL geladen hat.
- */
-async function getAppWindow(electronApp: ElectronApplication): Promise<Page> {
-  const maxRetries = 10;
-  const retryDelay = 500; // ms
-
-  for (let i = 0; i < maxRetries; i++) {
-    const windows = electronApp.windows();
-    const appWindow = windows.find(w => w.url().includes('http://localhost'));
-
-    if (appWindow) {
-      await appWindow.waitForLoadState('domcontentloaded');
-      return appWindow;
-    }
-    await new Promise(resolve => setTimeout(resolve, retryDelay));
-  }
-  throw new Error('Hauptfenster der Anwendung nach mehreren Versuchen nicht gefunden.');
-}
+import fs from 'fs/promises';
+import os from 'os';
+import { deleteApiKeyFile } from './helpers/delete-api-key-file';
 
 /**
  * Hilfsfunktion, um den API-Schlüssel-Speicher vor einem Test zurückzusetzen.
@@ -28,15 +10,27 @@ async function getAppWindow(electronApp: ElectronApplication): Promise<Page> {
  * Wir gehen davon aus, dass `saveApiKey` mit null/leer den Key löscht.
  */
 async function resetApiKeyStorage(page: Page) {
-  await page.evaluate(async () => {
-    // Warten, bis die API bereit ist, um Race Conditions zu vermeiden
-    await new Promise<void>((resolve) => {
-      const check = () => (window.kiki_api ? resolve() : setTimeout(check, 100));
-      check();
+  // Robust: Wenn Seite schon geschlossen, ignoriere still
+  if (typeof page.isClosed === 'function' && page.isClosed()) {
+    return;
+  }
+  try {
+    await page.evaluate(async () => {
+      await new Promise<void>((resolve) => {
+        const check = () => (window.kiki_api ? resolve() : setTimeout(check, 100));
+        check();
+      });
+      await window.kiki_api?.saveApiKey(null);
     });
-    // Speichern eines leeren Wertes, um den Schlüssel zu löschen/zurückzusetzen.
-    await window.kiki_api.saveApiKey(null);
-  });
+    // Warte explizit, bis der Key wirklich gelöscht ist!
+    await page.waitForFunction(async () => {
+      const result = await window.kiki_api?.loadApiKey();
+      return result && result.apiKey == null;
+    }, null, { timeout: 2000 });
+  } catch (e) {
+    // Fehler nur loggen, aber Test nicht abbrechen!
+    console.warn('resetApiKeyStorage konnte nicht ausgeführt werden:', (e && typeof e === 'object' && 'message' in e) ? (e as any).message : e);
+  }
 }
 
 // === TEST SUITE: API Key Manager ===
@@ -44,47 +38,57 @@ async function resetApiKeyStorage(page: Page) {
 // (verhindert Race Conditions und "page closed"-Fehler)
 test.describe.configure({ mode: 'serial' });
 test.describe('API Key Manager E2E Tests', () => {
-  let electronApp: ElectronApplication;
-  let appWindow: Page;
+  // Jede Testfunktion bekommt eigene Electron-Instanz und eigenes Fenster
+  let electronApp: ElectronApplication | undefined;
+  let appWindow: Page | undefined;
+  let testUserDataDir: string;
 
-  // Startet die Electron-Anwendung einmal für die gesamte Test-Suite.
-  test.beforeAll(async () => {
-    electronApp = await _electron.launch({
-      args: [path.join(__dirname, '../../dist/main/index.js'), 'http://localhost:5175'],
-    });
-    appWindow = await getAppWindow(electronApp);
-  });
-
-  // Robustes Aufräumen nach jedem Test: Offene Electron-Instanzen werden geschlossen, um Speicherlecks zu verhindern
-  test.afterEach(async () => {
-    try {
-      if (electronApp && !electronApp.isClosed()) {
+  // Hilfsfunktion für robustes Schließen
+  async function safeCloseApp() {
+    if (electronApp) {
+      try {
         await electronApp.close();
+      } catch (err) {
+        console.warn('electronApp konnte nicht geschlossen werden:', (err && typeof err === 'object' && 'message' in err) ? (err as any).message : err);
       }
-    } catch (err) {
-      // Fehler beim Schließen werden geloggt, aber nicht erneut geworfen
-      console.error('Fehler beim Schließen von electronApp nach Test:', err);
+      electronApp = undefined;
     }
-  });
+    appWindow = undefined;
+  }
 
-  // Schließt die Anwendung nach Abschluss aller Tests.
-  test.afterAll(async () => {
+  // Hilfsfunktion für robustes Reload
+  async function safeReload(page: Page | undefined) {
+    if (!page || (typeof page.isClosed === 'function' && page.isClosed())) return;
     try {
-      await resetApiKeyStorage(appWindow);
-      if (electronApp && !electronApp.isClosed()) {
-        await electronApp.close();
-      }
-    } catch (err) {
-      console.error('Fehler beim finalen Schließen von electronApp:', err);
+      await page.reload();
+    } catch (e) {
+      console.warn('page.reload() konnte nicht ausgeführt werden:', (e && typeof e === 'object' && 'message' in e) ? (e as any).message : e);
     }
-  });
+  }
 
-  // Setzt vor JEDEM Test den Speicher zurück, um eine saubere Ausgangslage zu garantieren.
-  // beforeEach: Seite reloaden und Speicher zurücksetzen für sauberen Zustand
   test.beforeEach(async () => {
-    await resetApiKeyStorage(appWindow);
-    await appWindow.reload();
+    // Erzeuge ein frisches Temp-Verzeichnis für UserData
+    testUserDataDir = await fs.mkdtemp(path.join(os.tmpdir(), 'kiki-test-userdata-'));
+
+    electronApp = await _electron.launch({
+      args: [path.join(__dirname, '../../dist/main/index.js')],
+      env: {
+        ...process.env,
+        ELECTRON_USER_DATA_PATH: testUserDataDir,
+        OPENAI_API_KEY: '', // Verhindert automatische Initialisierung
+      }
+    });
+    appWindow = await electronApp.firstWindow();
+    await safeReload(appWindow);
   });
+
+  test.afterEach(async () => {
+    if (appWindow) {
+      await resetApiKeyStorage(appWindow);
+    }
+    await safeCloseApp();
+  });
+
 
   // --- Tests für die Preload/IPC-API-Schicht ---
   test.describe('Preload API Layer', () => {
@@ -102,18 +106,24 @@ test.describe('API Key Manager E2E Tests', () => {
         return window.kiki_api.loadApiKey();
       });
 
-      // 3. Assertion: Der geladene Schlüssel muss dem gespeicherten entsprechen.
-      expect(loadedKey).toBe(testKey);
+      // 3. Assertion: Das geladene Objekt muss den gespeicherten Key und success:true enthalten.
+      expect(loadedKey).toMatchObject({ apiKey: testKey, success: true });
     });
 
     test('should return null or undefined when loading a key that does not exist', async () => {
-      // Vorbedingung (durch beforeEach sichergestellt): Es ist kein Schlüssel gespeichert.
+      // Explizit: Key löschen und auf leeren Zustand warten
+      await appWindow.evaluate(() => window.kiki_api?.saveApiKey(null));
+      await appWindow.waitForFunction(async () => {
+        const result = await window.kiki_api?.loadApiKey();
+        return result && result.apiKey == null;
+      }, null, { timeout: 2000 });
+
       const loadedKey = await appWindow.evaluate(async () => {
         return window.kiki_api.loadApiKey();
       });
 
-      // Assertion: Das Ergebnis muss "falsy" sein (null, undefined, '').
-      expect(loadedKey).toBeFalsy();
+      // Assertion: Das Ergebnis muss das erwartete Objekt sein.
+      expect(loadedKey).toMatchObject({ apiKey: null, success: false });
     });
 
     test('should overwrite an existing API key', async () => {
@@ -128,19 +138,22 @@ test.describe('API Key Manager E2E Tests', () => {
 
       // 3. Schlüssel laden und überprüfen
       const loadedKey = await appWindow.evaluate(() => window.kiki_api.loadApiKey());
-      expect(loadedKey).toBe(newKey);
-      expect(loadedKey).not.toBe(initialKey);
+      expect(loadedKey).toMatchObject({ apiKey: newKey, success: true });
+      expect(loadedKey.apiKey).not.toBe(initialKey);
     });
   });
 
   // --- Tests für die UI-Interaktion ---
   test.describe('UI Interaction', () => {
     test('Save-Button ist nur nach gültiger Eingabe aktivierbar', async () => {
-      // 1. ARRANGE: UI-Elemente lokalisieren
-      const keyInput = appWindow.getByPlaceholder(/Enter your API key|Enter new key to update/i);
-      const saveButton = appWindow.getByRole('button', { name: /Save and Continue/i });
-
-      // 2. ASSERT: Button ist anfangs deaktiviert (Validierung greift)
+      // Warte explizit auf das Root-Element der App (Best Practice)
+      await appWindow.waitForSelector('#root', { timeout: 15000 });
+      // Debug: Logge das aktuelle HTML für Fehlersuche
+      console.log('Aktuelles HTML:', await appWindow.content());
+      // Jetzt: Sicherstellen, dass das Input-Feld und der Button erscheinen
+      const keyInput = await appWindow.getByPlaceholder(/Enter your API key|Enter new key to update/i);
+      await expect(keyInput).toBeVisible({ timeout: 10000 });
+      const saveButton = await appWindow.getByRole('button', { name: /Save and Continue/i });
       await expect(saveButton).toBeDisabled();
 
       // 3. ACT: Realistische Tastatureingabe eines garantiert gültigen Keys (OpenAI-Format)
@@ -186,7 +199,7 @@ test.describe('API Key Manager E2E Tests', () => {
       );
       // 6. Explizite Assertion: Key wurde gespeichert
       const finalLoadedKey = await appWindow.evaluate(() => window.kiki_api.loadApiKey());
-      expect(finalLoadedKey).toBe(testKey);
+      expect(finalLoadedKey).toMatchObject({ apiKey: testKey, success: true });
     });
 
     test('verhindert Speichern bei leerem Key (Button bleibt deaktiviert, keine Fehlermeldung)', async () => {
@@ -200,7 +213,7 @@ test.describe('API Key Manager E2E Tests', () => {
 
       // 3. Es wurde kein Schlüssel gespeichert
       const loadedKey = await appWindow.evaluate(() => window.kiki_api.loadApiKey());
-      expect(loadedKey).toBeFalsy();
+      expect(loadedKey).toMatchObject({ apiKey: null, success: false });
     });
 
     // Optionaler Test für die Maskierung des Keys
@@ -236,14 +249,18 @@ test.describe('API Key Manager E2E Tests', () => {
     // 3. Anwendung neu starten
     electronApp = await _electron.launch({
       args: [path.join(__dirname, '../../dist/main/index.js'), 'http://localhost:5175'],
+      env: {
+        ...process.env,
+        ELECTRON_USER_DATA_PATH: testUserDataDir,
+      }
     });
-    const newAppWindow = await getAppWindow(electronApp);
+    const newAppWindow = await electronApp.firstWindow();
 
     // 4. Schlüssel laden, ohne ihn erneut zu speichern
     const loadedKeyAfterRestart = await newAppWindow.evaluate(() => window.kiki_api.loadApiKey());
 
     // 5. Assertion: Der geladene Schlüssel muss der aus der vorherigen Sitzung sein.
-    expect(loadedKeyAfterRestart).toBe(persistentKey);
+    expect(loadedKeyAfterRestart).toMatchObject({ apiKey: persistentKey, success: true });
 
     // --- Cleanup: Electron-App nach Test wieder schließen, um Speicherlecks zu vermeiden ---
     await electronApp.close();
