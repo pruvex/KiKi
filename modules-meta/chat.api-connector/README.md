@@ -51,11 +51,21 @@ input: { message: string, history?: Message[], config?: {...} }
 output: { reply: string, usage?: {...}, model?: string }
 
 🧩 Erweiterbarkeit
-Unterstützung weiterer Anbieter (Anthropic, Mistral, Ollama etc.)
+Das Modul verwendet jetzt eine Provider-Map für maximale Flexibilität. Jeder Provider (z.B. OpenAI, Gemini, lokale LLMs) erhält eine eigene Funktion und kann einfach über die Map ergänzt werden.
 
-Umschaltbarer Provider-Modus (provider = "openai" | "gemini" | ...)
+Umschaltbarer Provider-Modus (provider = "openai" | "gemini" | ...), Standard ist "openai". Weitere Provider können durch Implementierung einer Funktion und einen Eintrag in die Map ergänzt werden.
 
-Rate-Limit- und Fehlerhandling zentralisiert
+Beispiel:
+```typescript
+const PROVIDERS = {
+  openai: callOpenAI,
+  // gemini: callGemini,
+  // local: callLocalLLM,
+};
+```
+Die Hauptlogik bleibt unverändert, neue Provider werden modular ergänzt.
+
+Rate-Limit- und Fehlerhandling sind zentralisiert.
 
 Prompt-Templating pro Provider möglich
 

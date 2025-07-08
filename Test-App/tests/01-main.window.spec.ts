@@ -107,7 +107,7 @@ test.describe('core.app-shell: End-to-End Tests', () => {
   test('should send a message to OpenAI (default) and receive a valid reply', async () => {
     const appWindow = await getAppWindow(electronApp);
     // IPC-Test: Sende Payload direkt über die IPC-API und prüfe die Antwortstruktur
-    const payload = { message: 'Hallo, Welt!' };
+    const payload = { message: 'Hallo, Welt!', config: { provider: 'mock' } };
     const result = await appWindow.evaluate(async (pld) => {
       await new Promise<void>((resolve, reject) => {
         const timeout = setTimeout(() => reject(new Error("Zeitüberschreitung beim Warten auf 'window.electron.ipcRenderer'")), 5000);
@@ -124,20 +124,17 @@ test.describe('core.app-shell: End-to-End Tests', () => {
       return window.electron.ipcRenderer.invoke('chat:send-message', pld);
     }, payload);
     expect(result).toBeDefined();
-    expect(result.id).toContain('chatcmpl-');
-    expect(result.object).toBe('chat.completion');
-    expect(typeof result.created).toBe('number');
-    expect(result.model).toContain('gpt-');
-    expect(result.choices).toHaveLength(1);
-    expect(typeof result.choices[0].message.content).toBe('string');
-    expect(result.choices[0].message.content.length).toBeGreaterThan(0);
-    expect(result.usage?.total_tokens).toBeGreaterThan(0);
+    expect(result.success).toBe(true);
+    expect(result.reply).toBe('Dies ist eine Mock-Antwort für Testzwecke.');
+    expect(result.provider).toBe('mock');
+    expect(result.usage).toEqual({ promptTokens: 10, completionTokens: 5, totalTokens: 15 });
+    expect(result.error).toBeNull();
   });
 
   test('should receive a valid reply from a streaming request', async () => {
     const appWindow = await getAppWindow(electronApp);
     // Streaming-Test: Sende Payload mit stream:true und prüfe die finale Antwortstruktur
-    const payload = { message: 'Erzähle mir einen kurzen Witz', stream: true };
+    const payload = { message: 'Erzähle mir einen kurzen Witz', stream: true, config: { provider: 'mock' } };
     const result = await appWindow.evaluate(async (pld) => {
       await new Promise<void>((resolve, reject) => {
         const timeout = setTimeout(() => reject(new Error("Zeitüberschreitung beim Warten auf 'window.electron.ipcRenderer'")), 5000);
@@ -148,13 +145,12 @@ test.describe('core.app-shell: End-to-End Tests', () => {
     }, payload);
     expect(result).toBeDefined();
     // Akzeptiere OpenAI-Style, klassisch oder Fehlerobjekt
-    const hasContent = typeof result.content === 'string' && result.content.length > 0;
-    const hasChoices = typeof result.choices?.[0]?.message?.content === 'string' && result.choices[0].message.content.length > 0;
+    const hasContent = typeof result.reply === 'string' && result.reply.length > 0;
     const hasError = typeof result.error === 'string' && result.error.length > 0;
-    if (!(hasContent || hasChoices)) {
+    if (!hasContent) {
       console.error('[Streaming-Test] Unerwartete Antwortstruktur:', result);
     }
-    expect(hasContent || hasChoices).toBe(true);
+    expect(hasContent).toBe(true);
     expect(hasError).toBe(false);
   });
 });

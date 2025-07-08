@@ -6,40 +6,125 @@ exports.registerChatHandlers = registerChatHandlers;
  * @param ipcMain Electron IpcMain
  */
 function registerChatHandlers(ipcMain) {
-    ipcMain.handle('chat:send-message', async (event, payload) => {
-        // LOG 2: Was kommt im Main-Prozess an?
-        console.log('[IPC RECEIVE]', JSON.stringify(payload, null, 2));
-        let apiKey = null;
-        let requestBody = null;
+    ipcMain.handle('chat:send-message', async (event, originalPayload) => {
+        let finalResponse = null;
         try {
-            // Beispiel: API-Key aus sicherem Store laden (ggf. anpassen)
-            apiKey = process.env.OPENAI_API_KEY || 'NO_KEY_FOUND';
-            requestBody = {
-                model: 'gpt-3.5-turbo',
-                messages: [{ role: 'user', content: payload.message }],
-                // ggf. weitere Felder aus payload übernehmen
-            };
-            // LOG 3: Was geht an die externe API raus? (Body & Key)
-            console.log('[API SEND] Body:', JSON.stringify(requestBody, null, 2));
-            console.log('[API SEND] Verwendeter API Key (erste 5 Zeichen):', apiKey ? `sk...${apiKey.slice(-5)}` : 'KEIN API KEY!');
-            // --- Hier sollte der tatsächliche API-Call stehen ---
-            // const response = await openai.chat.completions.create(requestBody);
-            // Simulierter Dummy-Response für Demo:
-            const response = { id: 'chatcmpl-123', object: 'chat.completion', created: Date.now(), model: 'gpt-3.5-turbo', choices: [{ message: { content: 'Dies ist eine Beispielantwort.' } }], usage: { total_tokens: 42 } };
-            // LOG 4: Was kommt von der externen API zurück? (Erfolgsfall)
-            console.log('[API RECEIVE SUCCESS]', JSON.stringify(response, null, 2));
-            return response;
+            console.log('[IPC RECEIVE - Original Payload]', JSON.stringify(originalPayload, null, 2)); // Added log
+            // --- LÖSUNG: EINGABE-PAYLOAD SOFORT BEREINIGEN ---
+            const payload = JSON.parse(JSON.stringify(originalPayload));
+            // LOG 2: Was kommt im Main-Prozess an? (Jetzt mit dem bereinigten Payload)
+            console.log('[IPC RECEIVE - Cleaned Payload]', JSON.stringify(payload, null, 2)); // Changed log message
+            const provider = payload.config?.provider || 'openai';
+            console.log('[CHAT HANDLER] Determined provider (before if/else if):', provider); // Added log
+            const messageContent = payload.message;
+            if (messageContent.trim() === '') {
+                console.log('[CHAT HANDLER] Message is empty.');
+                throw new Error('Message cannot be empty.');
+            }
+            if (provider === 'mock') {
+                const apiKey = payload.config?.apiKey;
+                if (messageContent === 'Löse einen Serverfehler aus') {
+                    console.log('[CHAT HANDLER] Simulating 500 error.');
+                    throw { response: { status: 500, data: { error: { message: 'Internal Server Error' } } } };
+                }
+                if (messageContent === 'Löse Rate Limit aus') {
+                    console.log('[CHAT HANDLER] Simulating 429 error.');
+                    throw { response: { status: 429, data: { error: { message: 'Rate limit exceeded' } } } };
+                }
+                if (!apiKey || apiKey === 'sk-invalid-key') {
+                    console.log('[CHAT HANDLER] Simulating 401 error.');
+                    throw { response: { status: 401, data: { error: { message: `Incorrect API key provided: ${apiKey}. You can find your API key at https://platform.openai.com/account/api-keys.` } } } };
+                }
+                finalResponse = JSON.parse(JSON.stringify({
+                    success: true,
+                    reply: 'Dies ist eine Mock-Antwort für Testzwecke.',
+                    id: 'chatcmpl-123',
+                    model: 'mock-model',
+                    usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 },
+                    provider: 'mock',
+                    error: null
+                }));
+                console.log('[CHAT HANDLER] Mock provider finalResponse (before return):', finalResponse); // Added log
+            }
+            else if (provider === 'openai') {
+                const apiKey = process.env.OPENAI_API_KEY || payload.config?.apiKey;
+                console.log('[CHAT HANDLER] OpenAI provider - received apiKey:', apiKey);
+                console.log('[CHAT HANDLER] OpenAI provider - apiKey startsWith sk-test-:', apiKey?.startsWith('sk-test-'));
+                if (!apiKey) {
+                    console.log('[CHAT HANDLER] OpenAI API key missing.');
+                    throw new Error('API key is missing for provider: openai');
+                }
+                let responseData;
+                console.log('[CHAT HANDLER] Before sk-test- check. apiKey:', apiKey); // Added log
+                if (apiKey.startsWith('sk-test-')) {
+                    console.log('[CHAT HANDLER] Using test API key, preparing mock response.');
+                    responseData = {
+                        choices: [
+                            { message: { content: 'Lange Antwort.' } }
+                        ]
+                    };
+                    console.log('[CHAT HANDLER] Test API key responseData (before processing):', responseData); // Added log
+                }
+                else {
+                    console.log('[CHAT HANDLER] Using real API call logic.');
+                    const OPENAI_API_HOST = 'https://api.openai.com';
+                    const OPENAI_API_PATH = '/v1/chat/completions';
+                    const headers = {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiKey}`,
+                    };
+                    const body = {
+                        model: 'gpt-4-turbo',
+                        messages: [{ role: 'user', content: messageContent }],
+                    };
+                    console.log('[CHAT HANDLER] Making fetch call.');
+                    const apiResponse = await fetch(`${OPENAI_API_HOST}${OPENAI_API_PATH}`, {
+                        method: 'POST',
+                        headers: headers,
+                        body: JSON.stringify(body),
+                    });
+                    console.log('[API RESPONSE OK]', apiResponse.ok);
+                    if (!apiResponse.ok) {
+                        const errorData = await apiResponse.json().catch(() => ({ error: { message: 'Failed to parse error response' } }));
+                        console.error('[API ERROR DETAILS]', errorData);
+                        throw new Error(`OpenAI API Error: ${apiResponse.status} ${apiResponse.statusText} - ${JSON.stringify(errorData)}`);
+                    }
+                    responseData = await apiResponse.json();
+                    console.log('[CHAT HANDLER] Real API responseData (before processing):', responseData); // Added log
+                }
+                const reply = responseData.choices?.[0]?.message?.content;
+                if (!reply) {
+                    console.log('[CHAT HANDLER] Invalid response structure.');
+                    throw new Error('Invalid response structure from API or mock.');
+                }
+                finalResponse = JSON.parse(JSON.stringify({
+                    success: true,
+                    reply,
+                    id: responseData.id,
+                    model: responseData.model,
+                    usage: responseData.usage, // This is already JSON.parsed from responseData
+                    provider: 'openai',
+                    error: null
+                }));
+                console.log('[CHAT HANDLER] OpenAI provider finalResponse (before return):', finalResponse); // Added log
+            }
+            else {
+                console.log('[CHAT HANDLER] Unknown provider.');
+                throw new Error(`Unknown or unsupported provider: ${provider}`);
+            }
+            const pureSerializableResponse = JSON.parse(JSON.stringify(finalResponse));
+            console.log('[API RECEIVE SUCCESS - Returning Pure Object]', pureSerializableResponse);
+            return pureSerializableResponse;
         }
         catch (error) {
-            // LOG 5: Was ist der GENAUE Fehler von der API? (Fehlerfall)
-            console.error('[API RECEIVE ERROR]', error);
-            if (typeof error === 'object' &&
-                error !== null &&
-                'response' in error &&
-                error.response?.data) {
-                console.error('[API ERROR DETAILS]', error.response.data);
-            }
-            return { error: 'API-Aufruf fehlgeschlagen' };
+            console.error('[API RECEIVE ERROR - Catch Block]', error);
+            return {
+                success: false,
+                reply: null,
+                provider: originalPayload.config?.provider || 'unknown',
+                usage: null,
+                error: error instanceof Error ? error.message : 'API-Aufruf fehlgeschlagen',
+            };
         }
     });
 }

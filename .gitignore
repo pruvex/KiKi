@@ -20,8 +20,11 @@ Thumbs.db
 shared/memory.json
 
 # MCP/AI
+.gemini/
+!.gemini/
 .gemini/settings.json
 .gemini/config.json
+# Damit bleibt der Ordner .gemini/ immer im Projekt, aber Settings und Configs sind weiterhin privat.
 
 # Sonstiges
 *.bak
