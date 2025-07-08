@@ -1,7 +1,7 @@
 import { IpcMain } from 'electron';
 import { registerApiKeyHandlers } from './api-key';
-import { registerChatHandlers } from './chat';
-// import { registerApiConnector } from '../modules/chat/api-connector'; // (vorerst auskommentiert, bis implementiert)
+// import { registerChatHandlers } from './chat'; // Veraltet, ersetzt durch ApiConnector
+import { registerApiConnector } from '../modules/chat/api-connector';
 
 /**
  * Registers all IPC (Inter-Process Communication) event handlers.
@@ -14,8 +14,8 @@ export function registerIpcHandlers(ipcMain: IpcMain): void {
 
   // Register handlers from different modules
   registerApiKeyHandlers(ipcMain);
-  registerChatHandlers(ipcMain);
-  // registerApiConnector(ipcMain); // (auskommentiert)
+  // registerChatHandlers(ipcMain); // Veraltet, ersetzt durch ApiConnector
+  registerApiConnector(ipcMain);
 
   // --- Example of how a module would register its handlers ---
   // import { registerChatHandlers } from './chat-module-handlers';

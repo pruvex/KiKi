@@ -7,7 +7,11 @@ export default defineConfig({
   testDir: './tests',
   timeout: 60000,
   retries: 1,
-  reporter: [['list'], ['html', { outputFolder: 'playwright-report' }]],
+  reporter: [
+    ['list'],
+    ['json', { outputFile: 'test-results/json/playwright-report.json' }],
+    ['html', { outputFolder: 'test-results/html', open: 'never' }]
+  ],
   use: {
     baseURL: 'http://localhost:5175',
     screenshot: 'only-on-failure',
