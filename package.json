@@ -3,7 +3,7 @@
   "scripts": {
     "test:full": "npm run build:main && concurrently -k -s first -n VITE,TEST \"npm:dev:vite\" \"wait-on http://localhost:5175 && cd Test-App && npx playwright test --ui\"",
     "test:watch": "playwright test --watch",
-    "build:main": "tsc && copy \"main\\preload.js\" \"dist\\preload.js\"",
+    "build:main": "tsc && copyfiles -f main/preload.js dist/main/",
     "dev": "concurrently \"npm:dev:vite\" \"npm run build:main && npm:dev:electron\"",
     "dev:vite": "vite renderer --port 5175",
     "dev:electron": "cross-env NODE_ENV=development electron dist/index.js",

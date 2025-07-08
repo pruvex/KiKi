@@ -20,32 +20,50 @@ declare global {
 
 // --- Hilfsfunktion: Liefert das Hauptfenster der Electron-App ---
 async function getAppWindow(electronApp: ElectronApplication): Promise<Page> {
-  const maxRetries = 10;
-  const retryDelay = 500; // ms
+  const maxRetries = 30;
+  const retryDelay = 1000; // ms
+  let mainWindow: Page | undefined;
   for (let i = 0; i < maxRetries; i++) {
     const windows = electronApp.windows();
-    console.log(`[getAppWindow] Versuch ${i + 1}: Gefundene Fenster-URLs:`, windows.map(w => w.url()));
-    const appWindow = windows.find(w => w.url().includes('http://localhost'));
-    if (appWindow) {
-      await appWindow.waitForLoadState('domcontentloaded');
-      console.log('[getAppWindow] Hauptfenster gefunden und geladen:', appWindow.url());
-      return appWindow;
+    if (windows.length === 0) {
+      console.log('[getAppWindow] Kein Fenster gefunden, warte ...');
+      await new Promise(r => setTimeout(r, retryDelay));
+      continue;
     }
-    await new Promise(resolve => setTimeout(resolve, retryDelay));
+    console.log('[getAppWindow] Alle Fenster-URLs:', windows.map(w => w.url()));
+    mainWindow = windows.find(w => w.url().includes('localhost')) || windows[0];
+    if (mainWindow) {
+      console.log('[getAppWindow] Hauptfenster gefunden und geladen:', mainWindow.url());
+      return mainWindow;
+    }
+    await new Promise(r => setTimeout(r, retryDelay));
   }
-  throw new Error('Hauptfenster der Anwendung nach mehreren Versuchen nicht gefunden.');
+  throw new Error('[getAppWindow] Hauptfenster der Anwendung nach mehreren Versuchen nicht gefunden.');
 }
 
 // --- Haupt-Test-Suite für den Chat API Connector ---
-test.describe('Chat API Connector Tests', () => {
+test.describe('core.app-shell: End-to-End Tests', () => {
+  // Vor Electron-Start: Dev-Server-Check
+  test.beforeAll(async () => {
+    let devServerOk = false;
+    for (let i = 0; i < 30; i++) {
+      try {
+        const res = await fetch('http://localhost:5175/');
+        if (res.ok) { devServerOk = true; break; }
+      } catch {}
+      await new Promise(r => setTimeout(r, 1000));
+    }
+    expect(devServerOk, 'Vite-Dev-Server nicht erreichbar!').toBeTruthy();
+  });
+
   let electronApp: ElectronApplication;
-  let appWindow: Page;
 
   test.beforeAll(async () => {
     electronApp = await _electron.launch({
-      args: [path.join(__dirname, '../../dist/main/index.js'), 'http://localhost:5175'],
+      args: [path.join(__dirname, '../../dist/main/index.js'), '--window-size=1280,720'],
+      cwd: path.resolve(__dirname, '../../'),
+      env: { ...process.env, NODE_ENV: 'development', KIKI_APP_SHELL_DEV_URL: 'http://localhost:5175' }
     });
-    appWindow = await getAppWindow(electronApp);
   });
 
   test.afterAll(async () => {
@@ -53,6 +71,7 @@ test.describe('Chat API Connector Tests', () => {
   });
 
   test.beforeEach(async () => {
+    const appWindow = await getAppWindow(electronApp);
     const apiKey = process.env.OPENAI_API_KEY ?? '';
     expect(apiKey, 'OPENAI_API_KEY muss in der Umgebung gesetzt sein').toBeTruthy();
     // Warte, bis window.kiki_api verfügbar ist, dann speichere den API-Key
@@ -74,6 +93,7 @@ test.describe('Chat API Connector Tests', () => {
   });
 
   test('should send a message and see the reply on screen', async () => {
+    const appWindow = await getAppWindow(electronApp);
     // UI-Test: Sende Nachricht und prüfe, dass eine Antwort erscheint
     const messageInput = appWindow.getByPlaceholder('Type your message here...');
     await messageInput.fill('Hallo, was kannst du?');
@@ -85,6 +105,7 @@ test.describe('Chat API Connector Tests', () => {
   });
 
   test('should send a message to OpenAI (default) and receive a valid reply', async () => {
+    const appWindow = await getAppWindow(electronApp);
     // IPC-Test: Sende Payload direkt über die IPC-API und prüfe die Antwortstruktur
     const payload = { message: 'Hallo, Welt!' };
     const result = await appWindow.evaluate(async (pld) => {
@@ -114,6 +135,7 @@ test.describe('Chat API Connector Tests', () => {
   });
 
   test('should receive a valid reply from a streaming request', async () => {
+    const appWindow = await getAppWindow(electronApp);
     // Streaming-Test: Sende Payload mit stream:true und prüfe die finale Antwortstruktur
     const payload = { message: 'Erzähle mir einen kurzen Witz', stream: true };
     const result = await appWindow.evaluate(async (pld) => {

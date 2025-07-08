@@ -1,4 +1,20 @@
-<<<<<<< HEAD
+# Aktueller Stand Playwright-Tests & ToDo (08.07.2025)
+
+- **Smoke-Test** robust: Test erkennt, ob der API-Key-Dialog erscheint oder direkt das Chat-UI geladen wird.
+- Fenstererkennung und UI-Flow sind stabilisiert.
+- Debug-Ausgaben zeigen: Meist wird direkt das Chat-UI angezeigt, Button "Save and Continue" ist dann nicht im DOM.
+
+**Nächste Schritte:**
+1. Weitere Tests in `01-smoke-test.spec.ts` und `01-main.window.spec.ts` prüfen und stabilisieren (Race-Conditions, persistente App-Zustände, UI-Selectoren).
+2. Lint-Fehler beheben (siehe IDE-Ausgaben zu "possibly undefined" und Selector-Problemen).
+3. CI-Stabilität testen (Mehrfachläufe, Umgebungswechsel).
+
+**Debug-Tipp:**
+- Wenn der API-Key schon gespeichert ist, erscheint der Dialog nicht mehr – Test wartet dann direkt auf das Chat-UI.
+- Bei Problemen immer die Debug-Ausgaben und den HTML-Dump im Test-Log prüfen.
+- Für neue Tests: Immer robusten UI-Flow bauen (Dialog-Existenz prüfen, Fallback auf Chat-UI).
+
+---
 # KiKi Test-App
 
 ## Was ist die Test-App?

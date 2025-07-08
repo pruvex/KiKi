@@ -34,27 +34,34 @@ function createMainWindow(): void {
       },
     });
 
-    // Load the UI: either from the Vite dev server, a command-line argument, or the production build.
-    const urlToLoad = process.argv[2] || VITE_DEV_SERVER_URL;
-
-    if (urlToLoad) {
-      console.log(`[Main] Lade URL: ${urlToLoad}`);
-      mainWindow.loadURL(urlToLoad);
-      if (IS_DEV) {
-        mainWindow.webContents.openDevTools();
-        mainWindow.webContents.on('did-finish-load', () => {
-          if (mainWindow) {
-            const [width, height] = mainWindow.getSize();
-            console.log(`[Main] Fenstergröße nach Laden: ${width}x${height}`);
-          }
-        });
-      }
+    // Nachhaltige Ladelogik: Im Dev-Modus Dev-Server, im Prod-Modus IMMER das lokale Build
+    if (IS_DEV && (process.env.KIKI_APP_SHELL_DEV_URL || VITE_DEV_SERVER_URL)) {
+      const urlToLoad = process.env.KIKI_APP_SHELL_DEV_URL || VITE_DEV_SERVER_URL;
+      console.log(`[Main] Lade Dev-Server: ${urlToLoad}`);
+      mainWindow.loadURL(urlToLoad).catch(err => {
+        console.error(`[Main] Fehler beim Laden der URL ${urlToLoad}:`, err);
+      });
+      mainWindow.webContents.openDevTools();
+      mainWindow.webContents.on('did-finish-load', () => {
+        if (mainWindow) {
+          const [width, height] = mainWindow.getSize();
+          console.log(`[Main] Fenstergröße nach Laden: ${width}x${height}`);
+        }
+      });
     } else {
-      console.log('[Main] Lade Produktions-Build.');
-      mainWindow.loadFile(path.join(__dirname, '..', 'renderer', 'dist', 'index.html'));
+      // Produktions-Build laden
+      const prodPath = path.join(__dirname, '../index.html');
+      console.log(`[Main] Lade Produktions-Build: ${prodPath}`);
+      mainWindow.loadFile(prodPath).catch(err => {
+        console.error(`[Main] Fehler beim Laden der Datei ${prodPath}:`, err);
+      });
     }
 
     // Gracefully handle window closure.
+    // Renderer-Fehler-Logging (hilft bei nachhaltiger Fehlersuche)
+    mainWindow.webContents.on('console-message', (_e, level, message) => {
+      console.log(`[Renderer][${level}]: ${message}`);
+    });
     mainWindow.on('closed', () => {
       mainWindow = null;
     });
