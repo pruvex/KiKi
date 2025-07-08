@@ -1,0 +1,41 @@
+# Prompt für AI Studio: Testblock für chat.api-connector
+
+**Aufgabe:**
+Generiere einen vollständigen, robusten Playwright-Testblock für das Electron-Modul `chat.api-connector` (siehe README und Architektur). Der Test soll das Modul auf Herz und Nieren prüfen und alle folgenden Anforderungen erfüllen:
+
+## Anforderungen an den Testblock
+
+1. **IPC-Kommunikation testen:**
+   - Sende verschiedene Nachrichten über die IPC-Schnittstelle `chat:send-message`.
+   - Prüfe die Antwortstruktur (reply, usage, Fehler).
+
+2. **Provider-Switching:**
+   - Teste, dass der Provider über die Config korrekt gesetzt und verarbeitet wird (z.B. "openai", "gemini", "local").
+   - Simuliere unbekannte Provider und prüfe die Fehlerbehandlung.
+
+3. **API-Key-Handling:**
+   - Teste das Verhalten bei fehlendem, ungültigem oder vorhandenem API-Key.
+   - Prüfe, dass ohne Key eine verständliche Fehlermeldung zurückkommt.
+
+4. **Antwort- und Fehlerstruktur:**
+   - Stelle sicher, dass alle Felder (`success`, `reply`, `usage`, `provider`, `error`) korrekt gesetzt sind – sowohl bei Erfolg als auch bei Fehlern.
+
+5. **Edge Cases:**
+   - Leere Nachrichten, extrem lange Nachrichten, ungültige Payloads.
+   - Fehlerhafte API-Antworten (z.B. HTTP 500, Rate Limit, ungültige Antwortstruktur).
+
+6. **Mock/Fake-Modus:**
+   - Falls ein Dummy/Mock-Provider existiert, prüfe, dass dieser wie dokumentiert funktioniert.
+
+7. **Teststruktur:**
+   - Schreibe die Tests als Playwright-Testdatei im Stil der bestehenden KiKi-Test-App (`*.spec.ts`).
+   - Nutze aussagekräftige Descriptions und klare Struktur (describe/it).
+   - Kommentiere wichtige Testschritte.
+
+## Kontext/Architektur
+- Das Modul läuft im Electron-Main-Prozess und ist über IPC erreichbar.
+- Die Provider-Map ist modular aufgebaut, OpenAI ist Standard.
+- Die IPC-Schnittstelle ist: `chat:send-message` mit Payload `{ message, history?, config? }`.
+- Siehe auch die aktuelle README für Details zu Schnittstellen und Architektur.
+
+**Gib den vollständigen Playwright-Testblock aus, der direkt in die KiKi Test-App übernommen werden kann.**
